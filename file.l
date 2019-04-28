@@ -1,8 +1,12 @@
+  // Itay Fridman 305360653
+  // Idan Aharon  305437774
+  // Noam Bahar   203155650
 %{
   #include "y.tab.h"
 %}
 
 %%
+"/%"[.]*"%/"          ;//Ignore comments
 [ \t\n]               ;//Ignore whitespaces and tabs
 [0-9]+                {return NUM;}
 [0-9]+\.+[0-9]+       {return DOUBLE;}
@@ -16,14 +20,15 @@
 "while"               {return WHILE;}
 "for"                 {return FOR;}
 "var"                 {return VAR;}
-"int"                 {return INT;}
-"char"                {return CHAR;}
-"real"                {return REAL;}
-"int*"                {return INTP;}
-"char*"               {return CHARP;}
-"real*"               {return REALP;}
-"bool"                {return BOOL;}
-"string"              {return STRING;}
+"Main"                {return MAIN;}
+"int"                 {yylval.value = strdup(yytext);return INT;}
+"char"                {yylval.value = strdup(yytext);return CHAR;}
+"real"                {yylval.value = strdup(yytext);return REAL;}
+"int*"                {yylval.value = strdup(yytext);return INTP;}
+"char*"               {yylval.value = strdup(yytext);return CHARP;}
+"real*"               {yylval.value = strdup(yytext);return REALP;}
+"bool"                {yylval.value = strdup(yytext);return BOOL;}
+"string"              {yylval.value = strdup(yytext);return STRING;}
 "("                   {return LB;}
 ")"                   {return RB;}
 "{"                   {return LCB;}
@@ -53,5 +58,8 @@
 \"                    {return DOUBLEPAREN;}
 "true"                {return TRUE;}
 "false"               {return FALSE;}
-[a-zA-Z][_a-zA-Z0-0]* {return IDENTIFIER;}
+\'.\'                 {yylval.value = strdup(yytext); return CHARACTER;}
+\"[^"]*\"             {yylval.value = strdup(yytext); return STR;}
+[a-zA-Z][_a-zA-Z0-9]* {yylval.value = strdup(yytext); return IDENTIFIER;}
+
 %%
