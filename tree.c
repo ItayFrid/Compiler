@@ -3,7 +3,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <malloc.h>
-
+// 
 /*Structs definitions*/
 typedef struct Node Node;
 typedef struct AST AST;
