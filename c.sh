@@ -1,5 +1,5 @@
 if  [[ $1 = "-d" ]]; then
-  rm y.tab.c y.tab.h lex.yy.c file
+  rm y.tab.c y.tab.h lex.yy.c file y.output
 elif [[ $1 = "-r" ]]; then
   ./file<file.t
 elif [[ $1 = "--debug" ]]; then
