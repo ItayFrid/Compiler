@@ -35,14 +35,20 @@ int lastChild = 0;
   Node* nPtr;
 }
 %start program
-%token NUM DOUBLE SEMICOLON PROC FUNC RETURN NUL IF ELSE WHILE FOR VAR INT CHAR REAL INTP CHARP REALP BOOL STRING LB RB LCB RCB LSB RSB COLON COMMA GREATER GREATEREQUAL LESS LESSEQUAL EQUAL AND DIVIDE ASSIGNMENT LENGTH PLUS MINUS MULT OR REF POWER NOT DIFF ONEPAREN DOUBLEPAREN TRUE FALSE IDENTIFIER CHARACTER STR MAIN
+
+%token NUM DOUBLE SEMICOLON PROC FUNC RETURN NUL IF ELSE WHILE FOR VAR INT
+%token CHAR REAL INTP CHARP REALP BOOL STRING LB RB LCB RCB LSB RSB COLON
+%token COMMA GREATER GREATEREQUAL LESS LESSEQUAL EQUAL AND DIVIDE ASSIGNMENT
+%token LENGTH PLUS MINUS MULT OR REF POWER NOT DIFF ONEPAREN DOUBLEPAREN TRUE
+%token FALSE IDENTIFIER CHARACTER STR MAIN
+
 %left PLUS MINUS
 %left MULT DIVIDE
 %left POWER
 %left LB RB
 %left AND OR
 %left ELSE
-
+%left COMMA
 
 %type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop compare declare retType identifier argumentList parameters main
 %type <value> type args retval
@@ -65,17 +71,26 @@ code:
     ;
 
 proc:
-    PROC identifier LB parameters RB body   {$$ = createNode("PROC",$2,$4,$6,NULL);}
-    | PROC identifier LB RB body            {$$ = createNode("PROC",$2,createNode("ARGS NONE", NULL),$5,NULL);}
+    PROC identifier LB parameters RB body
+        {$$ = createNode("PROC",$2,$4,$6,NULL);}
+    | PROC identifier LB RB body
+        {$$ = createNode("PROC",$2,createNode("ARGS NONE", NULL),$5,NULL);}
     ;
 
 func:
-    FUNC identifier LB parameters RB RETURN retType funcbody    {$$ = createNode("FUNC",$2,$4,$7,$8,NULL);}
-    | FUNC identifier LB RB RETURN retType funcbody             {$$ = createNode("FUNC",$2,createNode("ARGS NONE", NULL),$6,$7,NULL);}
+    FUNC identifier LB parameters RB RETURN retType funcbody
+        {$$ = createNode("FUNC",$2,$4,$7,$8,NULL);}
+    | FUNC identifier LB RB RETURN retType funcbody
+        {$$ = createNode("FUNC",$2,createNode("ARGS NONE", NULL),$6,$7,NULL);}
     ;
 
 retType:
-    type    {$$ = createNode(strcat($1, " RET"),NULL);}
+    type    {
+                char *s = (char*)malloc(sizeof(char));
+                strcat(s,"RET ");
+                strcat(s,$1);
+                $$ = createNode(s,NULL);
+            }
     ;
 
 parameters:
@@ -89,7 +104,8 @@ arguments:
     ;
 
 argumentList:
-    args COLON type {$$ = createNode("",createNode(strcat(strcat($3," "),$1),NULL),NULL);}
+    args COLON type
+        {$$ = createNode("",createNode(strcat(strcat($3," "),$1),NULL),NULL);}
     ;
 
 args:
@@ -117,12 +133,24 @@ main:
     ; 
 
 funcbody:
-        LCB statements RETURN retval SEMICOLON RCB  {$$ = createNode("BODY",$2,createNode(strcat($4," RET"),NULL),NULL);}
-    |   LCB RETURN retval SEMICOLON RCB  {$$ = createNode("BODY",createNode(strcat($3," RET"),NULL),NULL);}
+    LCB statements RETURN retval SEMICOLON RCB
+        {
+            char *s = (char*)malloc(sizeof(char));
+            strcat(s,"RET ");
+            strcat(s,$4);
+            $$ = createNode("BODY",$2,createNode(s,NULL),NULL);
+        }
+    | LCB RETURN retval SEMICOLON RCB
+        {
+            char *s = (char*)malloc(sizeof(char));
+            strcat(s,"RET ");
+            strcat(s,$3);
+            $$ = createNode("BODY",createNode(s,NULL),NULL);   
+        }
     ;
 
 retval:
-    NUM             {$$ = yytext;}
+    NUM             {$$ = yylval.value;}
     | CHARACTER     {$$ = yylval.value;}
     | STR           {$$ = yylval.value;}
     | IDENTIFIER    {$$ = yylval.value;}
@@ -144,13 +172,17 @@ statement:
     ;
 
 if:
-    IF LB compare RB statement                  {$$ = createNode("IF",$3,$5,NULL);}
-    | IF LB compare RB statement ELSE statement {$$ = createNode("IF-ELSE",$3,$5,$7,NULL);}
+    IF LB compare RB statement
+        {$$ = createNode("IF",$3,$5,NULL);}
+    | IF LB compare RB statement ELSE statement
+        {$$ = createNode("IF-ELSE",$3,$5,$7,NULL);}
     ;
 
 loop:
-    WHILE LB compare RB statement                                   {$$ = createNode("WHILE",$3,$5,NULL);}
-    | FOR LB assign SEMICOLON compare SEMICOLON assign RB statement {$$ = createNode("FOR", $3, $5, $7, $9, NULL);}
+    WHILE LB compare RB statement
+        {$$ = createNode("WHILE",$3,$5,NULL);}
+    | FOR LB assign SEMICOLON compare SEMICOLON assign RB statement
+        {$$ = createNode("FOR", $3, $5, $7, $9, NULL);}
     ;
 
 compare:
@@ -169,8 +201,10 @@ declare:
     ;
 
 assign:
-    identifier ASSIGNMENT exp           {$$ = createNode(strcat($1->token,"="),$3,NULL);}
-    | identifier ASSIGNMENT identifier  {$$ = createNode(strcat($1->token,"="),$3,NULL);}
+    identifier ASSIGNMENT exp
+        {$$ = createNode(strcat($1->token,"="),$3,NULL);}
+    | identifier ASSIGNMENT identifier
+        {$$ = createNode(strcat($1->token,"="),$3,NULL);}
     ;
 
 exp:
@@ -180,8 +214,8 @@ exp:
     | exp PLUS exp    {$$ = createNode("+",$1,$3,NULL);}
     | exp MINUS exp   {$$ = createNode("-",$1,$3,NULL);}
     | LB exp RB       {$$ = $2;}
-    | NUM             {$$=createNode(yytext,NULL);}
-    | DOUBLE          {$$=createNode(yytext,NULL);}
+    | NUM             {$$=createNode(yylval.value,NULL);}
+    | DOUBLE          {$$=createNode(yylval.value,NULL);}
     | IDENTIFIER      {$$=createNode(yylval.value,NULL);}
     ;
 

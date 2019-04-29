@@ -8,8 +8,8 @@
 %%
 "/%"[.]*"%/"          ;//Ignore comments
 [ \t\n]               ;//Ignore whitespaces and tabs
-[0-9]+                {return NUM;}
-[0-9]+\.+[0-9]+       {return DOUBLE;}
+[0-9]+                {yylval.value = strdup(yytext);return NUM;}
+[0-9]+\.+[0-9]+       {yylval.value = strdup(yytext);return DOUBLE;}
 ";"                   {return SEMICOLON;}
 "proc"                {return PROC;}
 "func"                {return FUNC;}
