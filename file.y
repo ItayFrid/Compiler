@@ -36,7 +36,7 @@ int lastChild = 0;
 }
 %start program
 
-%token NUM DOUBLE SEMICOLON PROC FUNC RETURN NUL IF ELSE WHILE FOR VAR INT
+%token NEGNUM NUM DOUBLE SEMICOLON PROC FUNC RETURN NUL IF ELSE WHILE FOR VAR INT
 %token CHAR REAL INTP CHARP REALP BOOL STRING LB RB LCB RCB LSB RSB COLON
 %token COMMA GREATER GREATEREQUAL LESS LESSEQUAL EQUAL AND DIVIDE ASSIGNMENT
 %token LENGTH PLUS MINUS MULT OR REF POWER NOT DIFF ONEPAREN DOUBLEPAREN TRUE
@@ -154,6 +154,7 @@ retval:
     | CHARACTER     {$$ = yylval.value;}
     | STR           {$$ = yylval.value;}
     | IDENTIFIER    {$$ = yylval.value;}
+    | NEGNUM        {$$ = yylval.value;}
     ;
 
 statements:
@@ -203,8 +204,8 @@ declare:
 assign:
     identifier ASSIGNMENT exp
         {$$ = createNode(strcat($1->token,"="),$3,NULL);}
-    | identifier ASSIGNMENT identifier
-        {$$ = createNode(strcat($1->token,"="),$3,NULL);}
+    | identifier ASSIGNMENT retval
+        {$$ = createNode(strcat($1->token,"="),createNode($3,NULL),NULL);}
     ;
 
 exp:
@@ -215,6 +216,7 @@ exp:
     | exp MINUS exp   {$$ = createNode("-",$1,$3,NULL);}
     | LB exp RB       {$$ = $2;}
     | NUM             {$$=createNode(yylval.value,NULL);}
+    | NEGNUM          {$$=createNode(yylval.value,NULL);}
     | DOUBLE          {$$=createNode(yylval.value,NULL);}
     | IDENTIFIER      {$$=createNode(yylval.value,NULL);}
     ;
