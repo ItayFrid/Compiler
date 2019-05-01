@@ -1,6 +1,6 @@
-// Itay Fridman 305360653
-// Idan Aharon  305437774
-// Noam Bahar   203155650
+// Itay Fridman -  305360653
+// Idan Aharon  - 305437774
+// Noam Bahar   - 203155650
 %{
 #include <stdio.h>
 #include <stdlib.h>
