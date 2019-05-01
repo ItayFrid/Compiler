@@ -67,7 +67,6 @@ process:
 code:
     proc            {$$=$1;}
     | func          {$$=$1;}
-    | statements    {$$=$1;}
     ;
 
 proc:
@@ -100,7 +99,6 @@ parameters:
 arguments:
     argumentList                        {$$ = createNode("",$1,NULL);}
     | argumentList SEMICOLON arguments  {$$ = createNode("",$1,$3,NULL);}
-    |                                   {$$ = createNode(" NONE",NULL);}
     ;
 
 argumentList:
