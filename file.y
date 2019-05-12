@@ -51,7 +51,7 @@ int lastChild = 0;
 %left COMMA
 
 %type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop compare declare retType identifier argumentList parameters main
-%type <value> type args retval
+%type <value> type args retval bool
 %%
 
 program:
@@ -153,7 +153,14 @@ retval:
     | STR           {$$ = yylval.value;}
     | IDENTIFIER    {$$ = yylval.value;}
     | NEGNUM        {$$ = yylval.value;}
+    | DOUBLE        {$$ = yylval.value;}
+    | bool          {$$ = $1;}
+    | NUL           {$$ = yylval.value;}
     ;
+
+bool:
+    TRUE    {$$ = yylval.value;}
+    | FALSE {$$ = yylval.value;}
 
 statements:
     statements statement    {$$=createNode("",$1,$2,NULL);}
@@ -213,10 +220,7 @@ exp:
     | exp PLUS exp    {$$ = createNode("+",$1,$3,NULL);}
     | exp MINUS exp   {$$ = createNode("-",$1,$3,NULL);}
     | LB exp RB       {$$ = $2;}
-    | NUM             {$$=createNode(yylval.value,NULL);}
-    | NEGNUM          {$$=createNode(yylval.value,NULL);}
-    | DOUBLE          {$$=createNode(yylval.value,NULL);}
-    | IDENTIFIER      {$$=createNode(yylval.value,NULL);}
+    | retval          {$$=createNode($1,NULL);}
     ;
 
 identifier:

@@ -1,19 +1,6 @@
-func func1() return int{
-  var c:char;
-  var y1,y2:int;
-  y1=-20;
-  y2=y1+15;
-  c='w';
-  if(y1<0){
-    y1=2;
-  }
-  return y2;
+proc a(){
+  a=b;
 }
-proc proc1(x,y:real;z:char){
-  if(x<y){
-    z='a';
-  }
-  else{
-    z='b';
-  }
+proc Main(){
+  a=b;
 }
