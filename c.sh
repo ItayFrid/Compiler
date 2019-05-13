@@ -7,7 +7,6 @@ elif [[ $1 = "--debug" ]]; then
   lex file.l
   cc -o file y.tab.c
 else
-  yacc -d file.y --debug --verbose
   yacc -d file.y
   lex file.l
   cc -o file y.tab.c

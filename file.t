@@ -1,4 +1,4 @@
-proc a()
-{
-var x:bool*;
+proc a(){
+  var x:int;
+  x=5;
 }

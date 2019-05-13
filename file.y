@@ -235,6 +235,10 @@ funcCall:
 
         $$=createNode("CALL",createNode($1,createNode($3,NULL),NULL),NULL);
     }
+    | IDENTIFIER LB RB
+    {
+        $$=createNode("CALL",createNode($1,NULL),NULL);
+    }
     ;
 
 retStatement:
@@ -307,6 +311,7 @@ identifier:
     ;
 
 %%
+
 int main(){
   pTree = createNode("CODE", NULL);
   yyparse();
@@ -373,20 +378,20 @@ void print(Node *root){
 }
 void printTree(Node *node, int level) {
     int i;
-    //if(strcmp(node->token,"")!=0){
+    // if(strcmp(node->token,"")!=0){
         for (i = 1; i < level; i++) {
             printf("    ");
         }
         if(node->numOfChilds!=0)
             printf("(");    
         printf("%s\n", node->token);
-   // }
-    //if(strcmp(node->token,"")==0)
-        //level = level-1;
+//    }
+    // if(strcmp(node->token,"")==0)
+    //     level = level-1;
     for (i = 0; i < node->numOfChilds; i++) {
         printTree((node->child)[i], level + 1);
     }
-    if(node->numOfChilds!=0 ){//&& strcmp(node->token,"")!=0){
+    if(node->numOfChilds!=0){ // && strcmp(node->token,"")!=0){
         for (i = 1; i < level; i++) {
             printf("    ");
         }
@@ -405,10 +410,12 @@ void reverseChilds(Node *node){
     free((node->child));
     node->child = newChilds;
 }
+
 void yyerror(char *s){
   fprintf(stderr,"%s ",s);
   printf("while reading token '%s'\n", yytext);
 }
+
 int yywrap(){
   return 1;
 }
@@ -421,21 +428,16 @@ void makeParents(Node *node, int level){
       node->child[i]->parent = node;
       makeParents(node->child[i], level+1);
   }
-
-
-
-  
 }
+
 void fixTree(Node *node, int level){
     int i;
-    if(strcmp(node->token, "") == 0)
-        fixEmptyNode(node);
     for(i=0; i<node->numOfChilds; i++)
         fixTree(node->child[i], level+1);
-    
-    
-    
+    if(strcmp(node->token, "") == 0)
+        fixEmptyNode(node);
 }
+
 void printer(Node *node) {
     int i;
     // for (i = 1; i < level; i++) {
@@ -455,7 +457,7 @@ void printer(Node *node) {
 
 void fixEmptyNode(Node *emptyNode){
     Node *newFather = emptyNode->parent;
-    int newSize = emptyNode->numOfChilds + newFather->numOfChilds;
+    int newSize = emptyNode->numOfChilds + newFather->numOfChilds - 1;
     Node **newChilds = (Node**) malloc ((newSize) * sizeof(Node*));
     int i, j, k, index = getChildIndex(newFather, emptyNode);
     
@@ -479,7 +481,7 @@ void fixEmptyNode(Node *emptyNode){
     free(newFather->child);
     free(emptyNode);
     newFather->child = newChilds;
-
+    newFather->numOfChilds = newSize;
 }
 
 void newError(const char *error){
@@ -527,11 +529,6 @@ void checkSemantics(Node *node, int level){
         checkProcFuncScope(node);
     if(strcmp(node->token, "VAR") == 0)
         checkVarScope(node);
-
-
-
-
-
 }
 
 //This function checks that there is only one main function and it is defined as the last one
