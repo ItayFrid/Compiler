@@ -15,7 +15,7 @@
 "proc"                {return PROC;}
 "func"                {return FUNC;}
 "return"              {return RETURN;}
-"null"                {return NUL;}
+"null"                {yylval.value = strdup(yytext); return NUL;}
 "if"                  {return IF;}
 "else"                {return ELSE;}
 "while"               {return WHILE;}
@@ -57,8 +57,8 @@
 "!="                  {return DIFF;}
 \'                    {return ONEPAREN;}
 \"                    {return DOUBLEPAREN;}
-"true"                {return TRUE;}
-"false"               {return FALSE;}
+"true"                {yylval.value = strdup(yytext); return TRUE;}
+"false"               {yylval.value = strdup(yytext); return FALSE;}
 \'.\'                 {yylval.value = strdup(yytext); return CHARACTER;}
 \"[^"]*\"             {yylval.value = strdup(yytext); return STR;}
 [a-zA-Z][_a-zA-Z0-9]* {yylval.value = strdup(yytext); return IDENTIFIER;}
