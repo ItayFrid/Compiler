@@ -1,4 +1,3 @@
 proc a(){
-  if(true || !false && true)
-    x=a;
+  x=(!4)*(!5)+!5;
 }

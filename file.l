@@ -52,7 +52,7 @@
 "*"                   {return MULT;}
 "||"                  {return OR;}
 "&"                   {return REF;}
-"^"                   {return POWER;}
+"^"                   {return DEREF;}
 "!"                   {return NOT;}
 "!="                  {return DIFF;}
 \'                    {return ONEPAREN;}

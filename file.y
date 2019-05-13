@@ -4,10 +4,11 @@
 
 // TODO:
 // add return to statements and remove from funcbody
-// fix 6 reduce/reduce problems in retval
-// add boolean support
+// fix 1 shift/reduce problems in compare
 // add array, pointers support
-// add NULL 
+// add NULL
+// add Hex support
+// add Empty code blocks
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,20 +47,20 @@ int lastChild = 0;
 %token NEGNUM NUM DOUBLE SEMICOLON PROC FUNC RETURN NUL IF ELSE WHILE FOR VAR INT
 %token CHAR REAL INTP CHARP REALP BOOL STRING LB RB LCB RCB LSB RSB COLON
 %token COMMA GREATER GREATEREQUAL LESS LESSEQUAL EQUAL AND DIVIDE ASSIGNMENT
-%token LENGTH PLUS MINUS MULT OR REF POWER NOT DIFF ONEPAREN DOUBLEPAREN TRUE
+%token LENGTH PLUS MINUS MULT OR REF DEREF NOT DIFF ONEPAREN DOUBLEPAREN TRUE
 %token FALSE IDENTIFIER CHARACTER STR MAIN
 
+%left NOT REF DEREF
 %left PLUS MINUS
 %left MULT DIVIDE
-%left POWER
+%left GREATER GREATEREQUAL LESS LESSEQUAL EQUAL DIFF
 %left OR
 %left AND
 %left LB RB
-%left NOT
 %left ELSE
 %left COMMA
 
-%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop compare declare retType identifier argumentList parameters main
+%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main
 %type <value> type args retval bool
 %%
 
@@ -187,30 +188,17 @@ statement:
     ;
 
 if:
-    IF LB compare RB statement
+    IF LB exp RB statement
         {$$ = createNode("IF",$3,$5,NULL);}
-    | IF LB compare RB statement ELSE statement
+    | IF LB exp RB statement ELSE statement
         {$$ = createNode("IF-ELSE",$3,$5,$7,NULL);}
     ;
 
 loop:
-    WHILE LB compare RB statement
+    WHILE LB exp RB statement
         {$$ = createNode("WHILE",$3,$5,NULL);}
-    | FOR LB assign SEMICOLON compare SEMICOLON assign RB statement
+    | FOR LB assign SEMICOLON exp SEMICOLON assign RB statement
         {$$ = createNode("FOR", $3, $5, $7, $9, NULL);}
-    ;
-
-compare:
-    exp GREATER exp         {$$ = createNode(">",$1,$3,NULL);}
-    | exp GREATEREQUAL exp  {$$ = createNode(">=",$1,$3,NULL);}
-    | exp LESS exp          {$$ = createNode("<",$1,$3,NULL);}
-    | exp LESSEQUAL exp     {$$ = createNode("<=",$1,$3,NULL);}
-    | exp EQUAL exp         {$$ = createNode("==",$1,$3,NULL);}
-    | exp DIFF exp          {$$ = createNode("!=",$1,$3,NULL);}
-    | compare AND compare   {$$ = createNode("&&",$1,$3,NULL);}
-    | compare OR compare    {$$ = createNode("||",$1,$3,NULL);}
-    | LB compare RB         {$$ = $2;}
-    | exp                   {$$ = $1;}
     ;
 
 declare:
@@ -223,12 +211,21 @@ assign:
     ;
 
 exp:
-    exp POWER exp     {$$ = createNode("^",$1,$3,NULL);}
-    | exp DIVIDE exp  {$$ = createNode("/",$1,$3,NULL);}
+    exp PLUS exp    {$$ = createNode("+",$1,$3,NULL);}
+    | exp MINUS exp    {$$ = createNode("-",$1,$3,NULL);}
     | exp MULT exp    {$$ = createNode("*",$1,$3,NULL);}
-    | exp PLUS exp    {$$ = createNode("+",$1,$3,NULL);}
-    | exp MINUS exp   {$$ = createNode("-",$1,$3,NULL);}
-    | NOT exp         {$$ = createNode("!",$2,NULL);}
+    | exp DIVIDE exp    {$$ = createNode("/",$1,$3,NULL);}
+    | exp AND exp    {$$ = createNode("&&",$1,$3,NULL);}
+    | exp EQUAL exp    {$$ = createNode("==",$1,$3,NULL);}
+    | exp GREATER exp    {$$ = createNode(">",$1,$3,NULL);}
+    | exp GREATEREQUAL exp    {$$ = createNode(">=",$1,$3,NULL);}
+    | exp LESS exp    {$$ = createNode("<",$1,$3,NULL);}
+    | exp LESSEQUAL exp    {$$ = createNode("<=",$1,$3,NULL);}
+    | exp DIFF exp    {$$ = createNode("!=",$1,$3,NULL);}
+    | exp OR exp    {$$ = createNode("||",$1,$3,NULL);}
+    | NOT exp {$$ = createNode("!",$2,NULL);}
+    | REF exp {$$ = createNode("&",$2,NULL);}
+    | DEREF exp {$$ = createNode("^",$2,NULL);}
     | LB exp RB       {$$ = $2;}
     | retval          {$$=createNode($1,NULL);}
     ;
