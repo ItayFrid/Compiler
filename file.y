@@ -3,8 +3,7 @@
 // Noam Bahar   203155650
 
 // TODO:
-// add double support
-// add Empty code blocks
+// add E in left double
 // Check if array[exp] need to be expression or identifier
 %{
 #include <stdio.h>
@@ -40,11 +39,11 @@ int lastChild = 0;
 }
 %start program
 
-%token NEGNUM NUM DOUBLE SEMICOLON PROC FUNC RETURN NUL IF ELSE WHILE FOR VAR INT
+%token NUM DOUBLE SEMICOLON PROC FUNC RETURN NUL IF ELSE WHILE FOR VAR INT
 %token CHAR REAL INTP CHARP REALP BOOL STRING LB RB LCB RCB LSB RSB COLON
 %token COMMA GREATER GREATEREQUAL LESS LESSEQUAL EQUAL AND DIVIDE ASSIGNMENT
-%token LENGTH PLUS MINUS MULT OR REF DEREF NOT DIFF ONEPAREN DOUBLEPAREN TRUE
-%token FALSE IDENTIFIER CHARACTER STR MAIN
+%token LENGTH PLUS MINUS MULT OR REF DEREF NOT DIFF TRUE FALSE IDENTIFIER
+%token CHARACTER STR MAIN
 
 %left NOT REF DEREF
 %left PLUS MINUS
@@ -56,7 +55,7 @@ int lastChild = 0;
 %left ELSE
 %left COMMA
 
-%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement
+%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement funcCall
 %type <value> type args retval bool NUM IDENTIFIER
 %%
 
@@ -126,10 +125,17 @@ type:
     | REALP     {$$=yylval.value;}
     | BOOL      {$$=yylval.value;}
     | STRING    {$$=yylval.value;}
+    | type LSB NUM RSB
+    {
+        char *s = (char*)malloc(sizeof(char));
+        strcat(s,$1);strcat(s,"[");strcat(s,$3);strcat(s,"]");
+        $$=s;
+    }
     ;
 
 body:
     LCB statements RCB  {$$ = createNode("BLOCK",$2,NULL);}
+    | LCB RCB           {$$ = createNode("BLOCK",NULL);}
     ;
 
 main:
@@ -155,11 +161,10 @@ funcbody:
 
 retval:
     NUM             {$$ = yylval.value;}
+    | DOUBLE        {$$ = yylval.value;}
     | CHARACTER     {$$ = yylval.value;}
     | STR           {$$ = yylval.value;}
     | identifier    {$$ = $1->token;}
-    | NEGNUM        {$$ = yylval.value;}
-    | DOUBLE        {$$ = yylval.value;}
     | bool          {$$ = $1;}
     | NUL           {$$ = yylval.value;}
     | LENGTH identifier LENGTH
@@ -181,14 +186,24 @@ statements:
     ;
 
 statement:
-    if                  {$$=$1;}
-    | assign SEMICOLON  {$$=$1;}
-    | loop              {$$=$1;}
-    | body              {$$=$1;}
-    | func              {$$=$1;}
-    | proc              {$$=$1;}
-    | declare           {$$=$1;}
-    | retStatement      {$$=$1;}
+    if                      {$$=$1;}
+    | assign SEMICOLON      {$$=$1;}
+    | loop                  {$$=$1;}
+    | body                  {$$=$1;}
+    | func                  {$$=$1;}
+    | proc                  {$$=$1;}
+    | declare               {$$=$1;}
+    | retStatement          {$$=$1;}
+    | funcCall SEMICOLON    {$$=$1;}
+    ;
+
+funcCall:
+    IDENTIFIER LB args RB
+    {
+        char *s = (char*)malloc(sizeof(char));
+
+        $$=createNode("CALL",createNode($1,createNode($3,NULL),NULL),NULL);
+    }
     ;
 
 retStatement:
@@ -224,23 +239,24 @@ assign:
     ;
 
 exp:
-    exp PLUS exp    {$$ = createNode("+",$1,$3,NULL);}
-    | exp MINUS exp    {$$ = createNode("-",$1,$3,NULL);}
-    | exp MULT exp    {$$ = createNode("*",$1,$3,NULL);}
-    | exp DIVIDE exp    {$$ = createNode("/",$1,$3,NULL);}
-    | exp AND exp    {$$ = createNode("&&",$1,$3,NULL);}
-    | exp EQUAL exp    {$$ = createNode("==",$1,$3,NULL);}
-    | exp GREATER exp    {$$ = createNode(">",$1,$3,NULL);}
-    | exp GREATEREQUAL exp    {$$ = createNode(">=",$1,$3,NULL);}
-    | exp LESS exp    {$$ = createNode("<",$1,$3,NULL);}
-    | exp LESSEQUAL exp    {$$ = createNode("<=",$1,$3,NULL);}
-    | exp DIFF exp    {$$ = createNode("!=",$1,$3,NULL);}
-    | exp OR exp    {$$ = createNode("||",$1,$3,NULL);}
-    | NOT exp {$$ = createNode("!",$2,NULL);}
-    | REF exp {$$ = createNode("&",$2,NULL);}
-    | DEREF exp {$$ = createNode("^",$2,NULL);}
-    | LB exp RB       {$$ = $2;}
-    | retval          {$$=createNode($1,NULL);}
+    exp PLUS exp            {$$ = createNode("+",$1,$3,NULL);}
+    | exp MINUS exp         {$$ = createNode("-",$1,$3,NULL);}
+    | exp MULT exp          {$$ = createNode("*",$1,$3,NULL);}
+    | exp DIVIDE exp        {$$ = createNode("/",$1,$3,NULL);}
+    | exp AND exp           {$$ = createNode("&&",$1,$3,NULL);}
+    | exp EQUAL exp         {$$ = createNode("==",$1,$3,NULL);}
+    | exp GREATER exp       {$$ = createNode(">",$1,$3,NULL);}
+    | exp GREATEREQUAL exp  {$$ = createNode(">=",$1,$3,NULL);}
+    | exp LESS exp          {$$ = createNode("<",$1,$3,NULL);}
+    | exp LESSEQUAL exp     {$$ = createNode("<=",$1,$3,NULL);}
+    | exp DIFF exp          {$$ = createNode("!=",$1,$3,NULL);}
+    | exp OR exp            {$$ = createNode("||",$1,$3,NULL);}
+    | NOT exp               {$$ = createNode("!",$2,NULL);}
+    | REF exp               {$$ = createNode("&",$2,NULL);}
+    | DEREF exp             {$$ = createNode("^",$2,NULL);}
+    | LB exp RB             {$$ = $2;}
+    | funcCall              {$$=$1;}
+    | retval                {$$=createNode($1,NULL);}
     ;
 
 identifier:
