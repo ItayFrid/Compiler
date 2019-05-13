@@ -9,10 +9,9 @@ func func1() return int{
   }
   return y2;
 }
-proc proc1(x,y:real;z:char){
-  if(x<y){
-    z='a';
-  }
+proc proc1(x,y:real;z:bool){
+  if(x<y)
+    return x;
   else{
     z='b';
   }

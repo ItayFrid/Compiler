@@ -1,6 +1,13 @@
 // Itay Fridman 305360653
 // Idan Aharon  305437774
 // Noam Bahar   203155650
+
+// TODO:
+// add return to statements and remove from funcbody
+// fix 6 reduce/reduce problems in retval
+// add boolean support
+// add array, pointers support
+// add NULL 
 %{
 #include <stdio.h>
 #include <stdlib.h>
