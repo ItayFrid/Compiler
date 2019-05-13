@@ -70,8 +70,8 @@ process:
     ;
 
 code:
-    proc            {$$=$1;}
-    | func          {$$=$1;}
+    proc    {$$=$1;}
+    | func  {$$=$1;}
     ;
 
 proc:
@@ -89,12 +89,13 @@ func:
     ;
 
 retType:
-    type    {
-                char *s = (char*)malloc(sizeof(char));
-                strcat(s,"RET ");
-                strcat(s,$1);
-                $$ = createNode(s,NULL);
-            }
+    type
+    {
+        char *s = (char*)malloc(sizeof(char));
+        strcat(s,"RET ");
+        strcat(s,$1);
+        $$ = createNode(s,NULL);
+    }
     ;
 
 parameters:
@@ -112,8 +113,8 @@ argumentList:
     ;
 
 args:
-    args COMMA args   {$$ = strcat($1,$3);}
-    | identifier      {$$ = strcat($1->token," ");}
+    args COMMA args {$$ = strcat($1,$3);}
+    | identifier    {$$ = strcat($1->token," ");}
     ;
 
 type:
@@ -230,7 +231,7 @@ loop:
     ;
 
 declare:
-    VAR argumentList SEMICOLON   {$$ = createNode("VAR", $2, NULL);}
+    VAR argumentList SEMICOLON  {$$ = createNode("VAR", $2, NULL);}
     ;
 
 assign:
