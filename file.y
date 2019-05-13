@@ -3,12 +3,9 @@
 // Noam Bahar   203155650
 
 // TODO:
-// add comments support
-// add return to statements and remove from funcbody
-// add array, pointers support
-// add NULL
-// add Hex support
+// add double support
 // add Empty code blocks
+// Check if array[exp] need to be expression or identifier
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +20,6 @@ typedef struct Node{
 } Node;
 
 #include "lex.yy.c"
-// #define YYSTYPE Node*
 void yyerror(char *s);
 int yywrap();
 Node * createNode(char *token, ...);
@@ -61,7 +57,7 @@ int lastChild = 0;
 %left COMMA
 
 %type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement
-%type <value> type args retval bool
+%type <value> type args retval bool NUM IDENTIFIER
 %%
 
 program:
@@ -161,7 +157,7 @@ retval:
     NUM             {$$ = yylval.value;}
     | CHARACTER     {$$ = yylval.value;}
     | STR           {$$ = yylval.value;}
-    | IDENTIFIER    {$$ = yylval.value;}
+    | identifier    {$$ = $1->token;}
     | NEGNUM        {$$ = yylval.value;}
     | DOUBLE        {$$ = yylval.value;}
     | bool          {$$ = $1;}
@@ -249,6 +245,18 @@ exp:
 
 identifier:
     IDENTIFIER  {$$=createNode(yylval.value,NULL);}
+    | IDENTIFIER LSB NUM RSB
+    {
+        char *s=(char*)malloc(sizeof(char));
+        strcat(s,$1);strcat(s,"[");strcat(s,$3);strcat(s,"]");
+        $$=createNode(s,NULL);
+    }
+    | IDENTIFIER LSB IDENTIFIER RSB
+    {
+        char *s=(char*)malloc(sizeof(char));
+        strcat(s,$1);strcat(s,"[");strcat(s,$3);strcat(s,"]");
+        $$=createNode(s,NULL);
+    }
     ;
 
 %%

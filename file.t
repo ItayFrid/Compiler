@@ -1,3 +1,4 @@
-proc a(){
-  x=|s|+5;
+proc a(a,b:real){
+  var x,y:int;
+  x=-1;
 }
