@@ -3,8 +3,8 @@
 // Noam Bahar   203155650
 
 // TODO:
+// add comments support
 // add return to statements and remove from funcbody
-// fix 1 shift/reduce problems in compare
 // add array, pointers support
 // add NULL
 // add Hex support
@@ -60,7 +60,7 @@ int lastChild = 0;
 %left ELSE
 %left COMMA
 
-%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main
+%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement
 %type <value> type args retval bool
 %%
 
@@ -166,11 +166,18 @@ retval:
     | DOUBLE        {$$ = yylval.value;}
     | bool          {$$ = $1;}
     | NUL           {$$ = yylval.value;}
+    | LENGTH identifier LENGTH
+    {
+        char *s=(char*)malloc(sizeof(char));
+        strcat(s,"|");strcat(s,$2->token);strcat(s,"|");
+        $$=s;
+    }
     ;
 
 bool:
     TRUE    {$$ = yylval.value;}
     | FALSE {$$ = yylval.value;}
+    ;
 
 statements:
     statements statement    {$$=createNode("",$1,$2,NULL);}
@@ -185,8 +192,18 @@ statement:
     | func              {$$=$1;}
     | proc              {$$=$1;}
     | declare           {$$=$1;}
+    | retStatement      {$$=$1;}
     ;
 
+retStatement:
+    RETURN retval SEMICOLON
+    {
+        char *s = (char*)malloc(sizeof(char));
+        strcat(s,"RET ");
+        strcat(s,$2);
+        $$ = createNode(s,NULL);
+    }
+    ;
 if:
     IF LB exp RB statement
         {$$ = createNode("IF",$3,$5,NULL);}
