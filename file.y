@@ -15,23 +15,43 @@ typedef struct Node Node;
 typedef struct Node{
     char *token;
     Node **child;
+    Node* parent;
     int numOfChilds;
 } Node;
 
 #include "lex.yy.c"
 void yyerror(char *s);
 int yywrap();
+// Creating Tree functions
 Node * createNode(char *token, ...);
 void addChild(Node *father, Node *newChild);
 void printTree(Node *node, int level);
 void print(Node *root);
 void reverseChilds(Node *node);
 Node* makeParent(char* token,Node*child);
-void fixTree(Node *node,Node* father);
+void fixTree(Node *node,int level);
 void printer(Node *node);
+
+// Semantic functions
+void newError(const char *error);
+void errorSummary();
+void makeParents(Node *node, int level);
+void checkSemantics(Node *root, int level);
+void checkMain(Node *node);
+int getChildIndex(Node *father, Node *child);
+void checkProcFuncScope(Node *procNode);
+char ** getVarNames(char *var, int *var_size);
+int compareVariables(char **list1, int size1, char **list2, int size2);
+void checkVarScope(Node *varNode);
+void fixEmptyNode(Node *emptyNode);
+
+// Global variables
 Node* pTree;
 int yydebug=1;
 int lastChild = 0;
+char **semErrors = NULL;
+int numOfErrors = 0;
+
 %}
 %union{
   char* value;
@@ -60,7 +80,17 @@ int lastChild = 0;
 %%
 
 program:
-    process {reverseChilds(pTree);print(pTree);}
+    process
+    {
+        reverseChilds(pTree);
+        makeParents(pTree, 1);
+        fixTree(pTree, 1);
+        checkSemantics(pTree, 1);
+        errorSummary();
+        //if(numOfErrors == 0)
+            print(pTree);
+        //printTree(pTree);
+    }
     ;
 
 process:  
@@ -282,7 +312,6 @@ int main(){
   yyparse();
   return 0;
 }
-
 /*Initializing new node*/
 Node * createNode(char *token, ...){
     int i, count = 0;
@@ -344,20 +373,20 @@ void print(Node *root){
 }
 void printTree(Node *node, int level) {
     int i;
-    if(strcmp(node->token,"")!=0){
+    //if(strcmp(node->token,"")!=0){
         for (i = 1; i < level; i++) {
             printf("    ");
         }
         if(node->numOfChilds!=0)
             printf("(");    
         printf("%s\n", node->token);
-    }
-    if(strcmp(node->token,"")==0)
-        level = level-1;
+   // }
+    //if(strcmp(node->token,"")==0)
+        //level = level-1;
     for (i = 0; i < node->numOfChilds; i++) {
         printTree((node->child)[i], level + 1);
     }
-    if(node->numOfChilds!=0 && strcmp(node->token,"")!=0){
+    if(node->numOfChilds!=0 ){//&& strcmp(node->token,"")!=0){
         for (i = 1; i < level; i++) {
             printf("    ");
         }
@@ -384,21 +413,28 @@ int yywrap(){
   return 1;
 }
 
-Node* makeParent(char* token,Node*child){
-  Node*parent = createNode(token,child,NULL);
-  return parent;
+void makeParents(Node *node, int level){
+    if(level == 1)
+        node->parent = NULL;
+  int i;
+  for(i=0; i<node->numOfChilds; i++){
+      node->child[i]->parent = node;
+      makeParents(node->child[i], level+1);
+  }
+
+
+
+  
 }
-void fixTree(Node *node,Node *father){
+void fixTree(Node *node, int level){
     int i;
-    if(node->numOfChilds != 0){
-        if(strcmp(node->token,"")==0){
-            for(i=0;i<node->numOfChilds;i++)
-                addChild(father,(node->child)[i]);
-            // free(node);
-        }
-        for(i=0;i<node->numOfChilds;i++)
-            fixTree((node->child)[i],node);
-    }
+    if(strcmp(node->token, "") == 0)
+        fixEmptyNode(node);
+    for(i=0; i<node->numOfChilds; i++)
+        fixTree(node->child[i], level+1);
+    
+    
+    
 }
 void printer(Node *node) {
     int i;
@@ -417,3 +453,199 @@ void printer(Node *node) {
     }
 }
 
+void fixEmptyNode(Node *emptyNode){
+    Node *newFather = emptyNode->parent;
+    int newSize = emptyNode->numOfChilds + newFather->numOfChilds;
+    Node **newChilds = (Node**) malloc ((newSize) * sizeof(Node*));
+    int i, j, k, index = getChildIndex(newFather, emptyNode);
+    
+    for(i = 0; i < emptyNode->numOfChilds; i++)
+        emptyNode->child[i]->parent = newFather;
+    i = 0;
+    k = 0;
+    j = 0;
+    while(i < newSize){
+        if(i >= index && i <= index+emptyNode->numOfChilds){
+            newChilds[i] = emptyNode->child[j];
+            j++;
+        }
+        else{
+            newChilds[i] = newFather->child[k];
+            k++;
+        }   
+        i++;
+    }
+
+    free(newFather->child);
+    free(emptyNode);
+    newFather->child = newChilds;
+
+}
+
+void newError(const char *error){
+    int i;
+    
+    char *newErr = (char*) malloc (sizeof(char) * strlen(error));
+    strcpy(newErr, error);
+    char **temp = NULL;
+    //For first error
+    if(numOfErrors == 0){
+        semErrors = (char**) malloc (sizeof(char*));
+        semErrors[0] = newErr;
+        numOfErrors = 1;
+    }
+    else{
+        temp = (char **) malloc (((numOfErrors) + 1) * (sizeof(char*)));
+        for(i = 0; i < numOfErrors; i++)
+            temp[i] = semErrors[i];
+        temp[numOfErrors] = newErr;
+        free(semErrors);
+        semErrors = temp;
+        numOfErrors++;
+    }
+}
+//This function prints out all errors collected in semantic check
+void errorSummary(){
+    int i;
+    if(numOfErrors == 0)
+        printf("No errors\n");
+    else{
+        for(i=0; i<numOfErrors; i++)
+            printf("Error #%d: %s\n", i+1, semErrors[i]);
+    }
+}
+
+//This function runs all semantic check functions
+void checkSemantics(Node *node, int level){
+    int i;
+    for(i = 0; i < node->numOfChilds; i++)
+        checkSemantics(node->child[i], level+1);
+
+    if(strcmp(node->token, "CODE") == 0)
+        checkMain(node);
+    if(strcmp(node->token, "PROC") == 0 || strcmp(node->token, "FUNC") == 0)
+        checkProcFuncScope(node);
+    if(strcmp(node->token, "VAR") == 0)
+        checkVarScope(node);
+
+
+
+
+
+}
+
+//This function checks that there is only one main function and it is defined as the last one
+void checkMain(Node *node){
+    //node argument is a "CODE" node
+    int countMains = 0, i;
+    for(i=0; i<node->numOfChilds; i++){     //Counting all "MAIN" nodes
+        if(strcmp(node->child[i]->token, "MAIN") == 0)
+            countMains++;
+    }
+    if(countMains == 0)
+        newError("No main defined");
+    if(countMains > 1)
+        newError("More than one Main function");
+    if(countMains == 1){
+        if(strcmp(node->child[node->numOfChilds-1]->token, "MAIN") != 0)
+            newError("Main function must be the last one");
+    }
+}
+
+//This function returns a childs position in fathers children array
+int getChildIndex(Node *father, Node *child){
+    int i = 0;
+    for(i=0; i<father->numOfChilds; i++){
+        if(father->child[i] == child)
+            return i;
+    }
+    return -1;
+}
+
+//This function checks that there are no 2 func/proc with the same name
+void checkProcFuncScope(Node *procNode){
+    int i;
+    Node *ptr = procNode->parent;   //Going up one level
+    int index = getChildIndex(ptr, procNode);
+
+    for(i=index; i<ptr->numOfChilds; i++){  //Checking all scope nodes
+        if(ptr->child[i] != procNode){  //If the current node is not the one being checked
+            if(strcmp(ptr->child[i]->token, "PROC") == 0 || strcmp(ptr->child[i]->token, "FUNC") == 0){     //if the current node is a proc or func
+                if(strcmp(procNode->child[0]->token, ptr->child[i]->child[0]->token) == 0)  //Comparing func/proc names
+                    newError("Conflicting Proc/Func definition");
+            }
+        }
+    }
+}
+
+//This function parses a var node token to get variable names
+char ** getVarNames(char *var, int *var_size){
+    const char delim[2] = " ";
+    char *buffer = (char*) malloc (strlen(var) * sizeof(char));
+    char **varNames = NULL;
+    int i = 0;
+    *var_size = 0;
+    strcpy(buffer, var);
+   /* get the first token */
+   buffer = strtok(buffer, delim);
+   
+   /* walk through other tokens */
+   while( buffer != NULL ) {
+      buffer = strtok(NULL, delim);
+      if(buffer != NULL)
+        (*var_size)++;
+   }
+   buffer = (char*) malloc (strlen(var) * sizeof(char));
+   strcpy(buffer, var);
+   varNames = (char**) malloc ((*var_size) * sizeof(char*));
+   
+   /* get the first token */
+   buffer = strtok(buffer, delim);
+   
+   /* walk through other tokens */
+   while( buffer != NULL ) {
+      buffer = strtok(NULL, delim);
+      if(buffer != NULL){
+          varNames[i] = buffer;
+          i++;
+      }
+   }
+   return varNames;
+}
+
+//This function returns the number of similarities between two variable lists
+int compareVariables(char **list1, int size1, char **list2, int size2){
+    int i, j, sim = 0;
+    for(i = 0; i < size1; i++){
+        for(j = 0; j < size2; j++){
+            if(strcmp(list1[i], list2[j]) == 0)
+                sim++;
+        }
+    }
+    return sim;
+}
+
+//This function checks that there are no 2 variables with the same name in same scope
+void checkVarScope(Node *varNode){
+    Node *scopePtr = varNode->parent, *varPtr = varNode->child[0];
+    int selfVarSize, size, i, index;
+    char **selfVarNames = NULL, **varNames = NULL;
+    while(strcmp(varPtr->token, "") == 0)
+        varPtr = varPtr->child[0];
+    selfVarNames = getVarNames(varPtr->token, &selfVarSize);
+    if(compareVariables(selfVarNames, selfVarSize, selfVarNames, selfVarSize) != selfVarSize)
+        newError("Repeated variable name for same type");
+    index = getChildIndex(scopePtr, varNode);
+    while(strcmp(scopePtr->token, "BLOCK") != 0 && strcmp(scopePtr->token, "BODY") != 0)
+        scopePtr = scopePtr->parent;
+    for(i = 0; i < scopePtr->numOfChilds; i++){
+        if(strcmp(scopePtr->child[i]->token, "VAR") == 0){
+            Node *search = scopePtr->child[i];
+            while(strcmp(search->token, "") == 0)
+                search = search->child[0];
+            varNames = getVarNames(search->token, &size);
+            if(compareVariables(selfVarNames, selfVarSize, varNames, size) != 0)
+                newError("Conflicting variable names");
+        }
+    }
+}
