@@ -4,7 +4,10 @@
 
 // TODO:
 // add return to statements and remove from funcbody
-// add array support
+// fix 6 reduce/reduce problems in retval
+// add boolean support
+// add array, pointers support
+// add NULL 
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,8 +52,10 @@ int lastChild = 0;
 %left PLUS MINUS
 %left MULT DIVIDE
 %left POWER
+%left OR
+%left AND
 %left LB RB
-%left AND OR
+%left NOT
 %left ELSE
 %left COMMA
 
@@ -204,6 +209,8 @@ compare:
     | exp DIFF exp          {$$ = createNode("!=",$1,$3,NULL);}
     | compare AND compare   {$$ = createNode("&&",$1,$3,NULL);}
     | compare OR compare    {$$ = createNode("||",$1,$3,NULL);}
+    | LB compare RB         {$$ = $2;}
+    | exp                   {$$ = $1;}
     ;
 
 declare:
@@ -213,8 +220,6 @@ declare:
 assign:
     identifier ASSIGNMENT exp
         {$$ = createNode(strcat($1->token,"="),$3,NULL);}
-    | identifier ASSIGNMENT retval
-        {$$ = createNode(strcat($1->token,"="),createNode($3,NULL),NULL);}
     ;
 
 exp:
@@ -223,6 +228,7 @@ exp:
     | exp MULT exp    {$$ = createNode("*",$1,$3,NULL);}
     | exp PLUS exp    {$$ = createNode("+",$1,$3,NULL);}
     | exp MINUS exp   {$$ = createNode("-",$1,$3,NULL);}
+    | NOT exp         {$$ = createNode("!",$2,NULL);}
     | LB exp RB       {$$ = $2;}
     | retval          {$$=createNode($1,NULL);}
     ;

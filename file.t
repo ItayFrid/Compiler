@@ -1,6 +1,4 @@
 proc a(){
-  a=b;
-}
-proc Main(){
-  a=b;
+  if(true || !false && true)
+    x=a;
 }
