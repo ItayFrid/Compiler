@@ -98,7 +98,7 @@ program:
     {
         reverseChilds(pTree);
         makeParents(pTree, 1);
-        fixTree(pTree, 1);
+        fixTree(pTree);
         initScopes(pTree);
         checkSemantics(pTree, 1);
         errorSummary();
