@@ -1,6 +1,6 @@
-proc p1(){
-  x=1;
+func p1() return char{
+  return a;
 }
 proc Main(){
-  x=p1();
+  p1(a,f(x+2));
 }

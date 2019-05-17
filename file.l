@@ -13,7 +13,7 @@
 <C_COMMENT>.    { }
 <C_COMMENT>\n { }
 [ \t\n]               ;//Ignore whitespaces and tabs
-(0|([+\-])?([1-9]+[0-9]*))|(0[xX][0-9A-F]+) {yylval.value = strdup(yytext);return NUM;}
+(0|([\-])?([1-9]+[0-9]*))|(0[xX][0-9A-F]+) {yylval.value = strdup(yytext);return NUM;}
 ([+\-])?(0|([1-9]+[0-9]*))?\.[0-9]*([eE][+-]?[0-9]+)?       {yylval.value = strdup(yytext);return DOUBLE;}
 ";"                   {return SEMICOLON;}
 "proc"                {return PROC;}

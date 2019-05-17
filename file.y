@@ -89,7 +89,7 @@ int numOfErrors = 0;
 %left ELSE
 %left COMMA
 
-%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement funcCall
+%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement funcCall funcArgs
 %type <value> type args retval bool NUM IDENTIFIER
 %%
 
@@ -99,9 +99,9 @@ program:
         reverseChilds(pTree);
         makeParents(pTree, 1);
         fixTree(pTree);
-        initScopes(pTree);
-        checkSemantics(pTree, 1);
-        errorSummary();
+        // initScopes(pTree);
+        // checkSemantics(pTree, 1);
+        // errorSummary();
         printScopes();
         //if(numOfErrors == 0)
             print(pTree);
@@ -155,7 +155,9 @@ arguments:
 
 argumentList:
     args COLON type
-        {$$ = createNode("",createNode(strcat(strcat($3," "),$1),NULL),NULL);}
+        {
+            $$ = createNode("",createNode(strcat(strcat($3," "),$1),NULL),NULL);
+        }
     ;
 
 args:
@@ -245,17 +247,22 @@ statement:
     ;
 
 funcCall:
-    IDENTIFIER LB args RB
+    IDENTIFIER LB funcArgs RB
     {
-        char *s = (char*)malloc(sizeof(char));
-        char *t = (char*)malloc(sizeof(char));
-        strcat(t,"ARGS ");strcat(t,$3);
-        $$=createNode("CALL",createNode($1,createNode(t,NULL),NULL),NULL);
+        // char *s = (char*)malloc(sizeof(char));
+        // char *t = (char*)malloc(sizeof(char));
+        // strcat(t,"ARGS ");strcat(t,$3);
+        $$=createNode("CALL",createNode($1,createNode("",$3,NULL),NULL),NULL);
     }
     | IDENTIFIER LB RB
     {
         $$=createNode("CALL",createNode($1,NULL),NULL);
     }
+    ;
+
+funcArgs:
+    funcArgs COMMA exp {$$ = createNode("",$1,$3,NULL);}
+    | exp {$$ = $1;}
     ;
 
 retStatement:
@@ -307,7 +314,7 @@ exp:
     | REF exp               {$$ = createNode("&",$2,NULL);}
     | DEREF exp             {$$ = createNode("^",$2,NULL);}
     | LB exp RB             {$$ = $2;}
-    | funcCall              {$$=$1;}
+    | funcCall              {$$ = $1;}
     | retval                {$$=createNode($1,NULL);}
     ;
 
