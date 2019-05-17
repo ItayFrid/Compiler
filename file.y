@@ -89,8 +89,8 @@ int numOfErrors = 0;
 %left ELSE
 %left COMMA
 
-%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement funcCall funcArgs
-%type <value> type args retval bool NUM IDENTIFIER
+%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement funcCall funcArgs args
+%type <value> type retval bool NUM IDENTIFIER
 %%
 
 program:
@@ -156,13 +156,13 @@ arguments:
 argumentList:
     args COLON type
         {
-            $$ = createNode("",createNode(strcat(strcat($3," "),$1),NULL),NULL);
+            $$ = createNode($3,$1,NULL);
         }
     ;
 
 args:
-    args COMMA args {$$ = strcat($1,$3);}
-    | identifier    {$$ = strcat($1->token," ");}
+    args COMMA identifier{$$ = createNode("",$1,$3,NULL);}
+    | identifier    {$$ = $1;}
     ;
 
 type:
@@ -294,7 +294,7 @@ declare:
 
 assign:
     identifier ASSIGNMENT exp
-        {$$ = createNode(strcat($1->token,"="),$3,NULL);}
+        {$$ = createNode("=",$1,$3,NULL);}
     ;
 
 exp:

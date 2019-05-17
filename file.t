@@ -1,6 +1,4 @@
-func p1() return char{
-  return a;
-}
 proc Main(){
-  p1();
+  var x,y:int;
+  x=5;
 }
