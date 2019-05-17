@@ -89,8 +89,9 @@ int numOfErrors = 0;
 %left ELSE
 %left COMMA
 
-%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement funcCall funcArgs args
-%type <value> type retval bool NUM IDENTIFIER
+
+%type <nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement funcCall funcArgs args retval
+%type <value> type bool NUM IDENTIFIER
 %%
 
 program:
@@ -98,7 +99,7 @@ program:
     {
         reverseChilds(pTree);
         makeParents(pTree, 1);
-        fixTree(pTree);
+        // fixTree(pTree);
         // initScopes(pTree);
         // checkSemantics(pTree, 1);
         // errorSummary();
@@ -192,35 +193,35 @@ main:
     ; 
 
 funcbody:
-    LCB statements RETURN retval SEMICOLON RCB
+    LCB statements RETURN exp SEMICOLON RCB
         {
-            char *s = (char*)malloc(sizeof(char));
-            strcat(s,"RET ");
-            strcat(s,$4);
-            $$ = createNode("BODY",$2,createNode(s,NULL),NULL);
+            // char *s = (char*)malloc(sizeof(char));
+            // strcat(s,"RET ");
+            // strcat(s,$4);
+            $$ = createNode("BODY",$2,$4,NULL);
         }
-    | LCB RETURN retval SEMICOLON RCB
+    | LCB RETURN exp SEMICOLON RCB
         {
-            char *s = (char*)malloc(sizeof(char));
-            strcat(s,"RET ");
-            strcat(s,$3);
-            $$ = createNode("BODY",createNode(s,NULL),NULL);   
+            // char *s = (char*)malloc(sizeof(char));
+            // strcat(s,"RET ");
+            // strcat(s,$3);
+            $$ = createNode("BODY",$3,NULL);   
         }
     ;
 
 retval:
-    NUM             {$$ = yylval.value;}
-    | DOUBLE        {$$ = yylval.value;}
-    | CHARACTER     {$$ = yylval.value;}
-    | STR           {$$ = yylval.value;}
-    | identifier    {$$ = $1->token;}
-    | bool          {$$ = $1;}
-    | NUL           {$$ = yylval.value;}
+    NUM             {$$ = createNode(yylval.value,NULL);}
+    | DOUBLE        {$$ = createNode(yylval.value,NULL);}
+    | CHARACTER     {$$ = createNode(yylval.value,NULL);}
+    | STR           {$$ = createNode(yylval.value,NULL);}
+    | identifier    {$$ = $1;}
+    | bool          {$$ = createNode($1,NULL);}
+    | NUL           {$$ = createNode(yylval.value,NULL);}
     | LENGTH identifier LENGTH
     {
         char *s=(char*)malloc(sizeof(char));
         strcat(s,"|");strcat(s,$2->token);strcat(s,"|");
-        $$=s;
+        $$=createNode(s,NULL);
     }
     ;
 
@@ -266,12 +267,12 @@ funcArgs:
     ;
 
 retStatement:
-    RETURN retval SEMICOLON
+    RETURN exp SEMICOLON
     {
-        char *s = (char*)malloc(sizeof(char));
-        strcat(s,"RET ");
-        strcat(s,$2);
-        $$ = createNode(s,NULL);
+        // char *s = (char*)malloc(sizeof(char));
+        // strcat(s,"RET ");
+        // strcat(s,$2);
+        $$ = createNode("RET",$2,NULL);
     }
     ;
 if:
@@ -315,22 +316,16 @@ exp:
     | DEREF exp             {$$ = createNode("^",$2,NULL);}
     | LB exp RB             {$$ = $2;}
     | funcCall              {$$ = $1;}
-    | retval                {$$=createNode($1,NULL);}
+    | retval                {$$=$1;}
     ;
 
 identifier:
     IDENTIFIER  {$$=createNode(yylval.value,NULL);}
-    | IDENTIFIER LSB NUM RSB
+    | IDENTIFIER LSB exp RSB
     {
-        char *s=(char*)malloc(sizeof(char));
-        strcat(s,$1);strcat(s,"[");strcat(s,$3);strcat(s,"]");
-        $$=createNode(s,NULL);
-    }
-    | IDENTIFIER LSB IDENTIFIER RSB
-    {
-        char *s=(char*)malloc(sizeof(char));
-        strcat(s,$1);strcat(s,"[");strcat(s,$3);strcat(s,"]");
-        $$=createNode(s,NULL);
+        // char *s=(char*)malloc(sizeof(char));
+        // strcat(s,"[");strcat(s,"]");
+        $$=createNode("[]",createNode($1,NULL),$3,NULL);
     }
     ;
 

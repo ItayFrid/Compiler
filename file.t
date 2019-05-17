@@ -1,4 +1,3 @@
-proc Main(){
-  var x,y:int;
-  x=5;
+proc f1(){
+  x[5+6] = 1;
 }
