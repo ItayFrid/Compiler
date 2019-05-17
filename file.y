@@ -11,42 +11,56 @@
 #include <stdarg.h>
 #include <string.h>
 #include <malloc.h>
-typedef struct Node Node;
-typedef struct Node{
-    char *token;
-    Node **child;
-    Node* parent;
-    int numOfChilds;
-} Node;
+#include "SymTable.c"
+// typedef struct Node Node;
+// typedef struct Node{
+//     char *token;
+//     Node **child;
+//     Node* parent;
+//     int numOfChilds;
+// } Node;
 
 #include "lex.yy.c"
 void yyerror(char *s);
 int yywrap();
-// Creating Tree functions
+
+// Tree functions
 Node * createNode(char *token, ...);
 void addChild(Node *father, Node *newChild);
 void printTree(Node *node, int level);
 void print(Node *root);
 void reverseChilds(Node *node);
-Node* makeParent(char* token,Node*child);
-void fixTree(Node *node,int level);
-void printer(Node *node);
-
-// Semantic functions
-void newError(const char *error);
-void errorSummary();
 void makeParents(Node *node, int level);
+void printer(Node *node);
+int getChildIndex(Node *father, Node *child);
+
+char * appendStrings(char *str1, char *str2);
+
+// Semantic checking functions
 void checkSemantics(Node *root, int level);
 void checkMain(Node *node);
-int getChildIndex(Node *father, Node *child);
 void checkProcFuncScope(Node *procNode);
-char ** getVarNames(char *var, int *var_size);
-int compareVariables(char **list1, int size1, char **list2, int size2);
 void checkVarScope(Node *varNode);
+void checkFunctionCall(Node *node);
+
+// Error handling
+void newError(const char *error);
+void errorSummary();
+
+// Empty node handling
+void fixTree(Node *root);
+void checkEmpty(Node *node, int level);
 void fixEmptyNode(Node *emptyNode);
+Node *currentEmptyNode = NULL;
+
+//Symbol table
+//SymTable * scopes_head = NULL;
+void initScopes(Node *node);
+Node * findScopeNode(Node *node);
 
 // Global variables
 Node* pTree;
+
 int yydebug=1;
 int lastChild = 0;
 char **semErrors = NULL;
@@ -85,8 +99,10 @@ program:
         reverseChilds(pTree);
         makeParents(pTree, 1);
         fixTree(pTree, 1);
+        initScopes(pTree);
         checkSemantics(pTree, 1);
         errorSummary();
+        printScopes();
         //if(numOfErrors == 0)
             print(pTree);
         //printTree(pTree);
@@ -232,8 +248,9 @@ funcCall:
     IDENTIFIER LB args RB
     {
         char *s = (char*)malloc(sizeof(char));
-
-        $$=createNode("CALL",createNode($1,createNode($3,NULL),NULL),NULL);
+        char *t = (char*)malloc(sizeof(char));
+        strcat(t,"ARGS ");strcat(t,$3);
+        $$=createNode("CALL",createNode($1,createNode(t,NULL),NULL),NULL);
     }
     | IDENTIFIER LB RB
     {
@@ -317,6 +334,17 @@ int main(){
   yyparse();
   return 0;
 }
+
+
+//YACC functions
+void yyerror(char *s){
+  fprintf(stderr,"%s ",s);
+  printf("while reading token '%s'\n", yytext);
+}
+int yywrap(){
+  return 1;
+}
+
 /*Initializing new node*/
 Node * createNode(char *token, ...){
     int i, count = 0;
@@ -372,26 +400,26 @@ void addChild(Node *father, Node *newChild){
         (father->numOfChilds)++;
     }
 }
+
 /*Printing AST*/
 void print(Node *root){
     printTree(root, 1);
 }
+
+//This function prints out the AST
 void printTree(Node *node, int level) {
     int i;
-    // if(strcmp(node->token,"")!=0){
         for (i = 1; i < level; i++) {
             printf("    ");
         }
         if(node->numOfChilds!=0)
             printf("(");    
         printf("%s\n", node->token);
-//    }
-    // if(strcmp(node->token,"")==0)
-    //     level = level-1;
+
     for (i = 0; i < node->numOfChilds; i++) {
         printTree((node->child)[i], level + 1);
     }
-    if(node->numOfChilds!=0){ // && strcmp(node->token,"")!=0){
+    if(node->numOfChilds!=0 ){
         for (i = 1; i < level; i++) {
             printf("    ");
         }
@@ -399,6 +427,25 @@ void printTree(Node *node, int level) {
     }
 }
 
+//This function prints out the tree without nesting
+void printer(Node *node) {
+    int i;
+    // for (i = 1; i < level; i++) {
+    //     printf("\t");
+    // }
+    printf("Node: %s\n", node->token);
+    if(node->numOfChilds == 0)
+        printf("No children\n");
+    else{
+    printf("Children:\n");
+    for (i = 0; i < node->numOfChilds; i++) 
+        printf("%s\n", (node->child)[i]->token);
+    for (i = 0; i < node->numOfChilds; i++) 
+        printer((node->child)[i]);
+    }
+}
+
+//This function reverses the order of a node's children array
 void reverseChilds(Node *node){
     int i = 0, j = (node->numOfChilds) - 1;
     Node **newChilds = (Node**) malloc ((node->numOfChilds) * sizeof(Node *));
@@ -411,15 +458,7 @@ void reverseChilds(Node *node){
     node->child = newChilds;
 }
 
-void yyerror(char *s){
-  fprintf(stderr,"%s ",s);
-  printf("while reading token '%s'\n", yytext);
-}
-
-int yywrap(){
-  return 1;
-}
-
+//This function initializes each node's parent refrence
 void makeParents(Node *node, int level){
     if(level == 1)
         node->parent = NULL;
@@ -430,35 +469,49 @@ void makeParents(Node *node, int level){
   }
 }
 
-void fixTree(Node *node, int level){
-    int i;
-    for(i=0; i<node->numOfChilds; i++)
-        fixTree(node->child[i], level+1);
-    if(strcmp(node->token, "") == 0)
-        fixEmptyNode(node);
+//This function returns a childs position in fathers children array
+int getChildIndex(Node *father, Node *child){
+    int i = 0;
+    for(i=0; i<father->numOfChilds; i++){
+        if(father->child[i] == child)
+            return i;
+    }
+    return -1;
 }
 
-void printer(Node *node) {
+//This function handles removing empty nodes from the entire tree
+void fixTree(Node *root){
+    do{
+        if(currentEmptyNode != NULL){
+            fixEmptyNode(currentEmptyNode);
+            currentEmptyNode = NULL;
+        }
+        checkEmpty(root, 1);
+    }while(currentEmptyNode != NULL);
+}
+
+//This function checks if there is an empty string node in the tree
+void checkEmpty(Node *node, int level){
     int i;
-    // for (i = 1; i < level; i++) {
-    //     printf("\t");
-    // }
-    printf("Node: %s\n", node->token);
-    if(node->numOfChilds == 0)
-        printf("No children\n");
-    else{
-    printf("Children:\n");
-    for (i = 0; i < node->numOfChilds; i++) 
-        printf("%s ", (node->child)[i]->token);
-    for (i = 0; i < node->numOfChilds; i++) 
-        printer((node->child)[i]);
+    if(currentEmptyNode == NULL){
+        if(strcmp(node->token, "") == 0){
+            currentEmptyNode = node;
+        }
+        else{
+            for(i=0;i<node->numOfChilds; i++)
+                checkEmpty(node->child[i], level + 1);
+        }
     }
 }
 
+//This function removes an empty node from the tree
 void fixEmptyNode(Node *emptyNode){
     Node *newFather = emptyNode->parent;
+
     int newSize = emptyNode->numOfChilds + newFather->numOfChilds - 1;
+
     Node **newChilds = (Node**) malloc ((newSize) * sizeof(Node*));
+
     int i, j, k, index = getChildIndex(newFather, emptyNode);
     
     for(i = 0; i < emptyNode->numOfChilds; i++)
@@ -477,13 +530,21 @@ void fixEmptyNode(Node *emptyNode){
         }   
         i++;
     }
-
     free(newFather->child);
     free(emptyNode);
     newFather->child = newChilds;
     newFather->numOfChilds = newSize;
 }
 
+//This function appends str2 to str1
+char * appendStrings(char *str1, char *str2){
+    char *app = (char*) malloc ((strlen(str1) + strlen(str2) + 1) * sizeof(char));
+    strcpy(app, str1);
+    strcat(app, str2);
+    return app;
+}
+
+//This function adds a new error
 void newError(const char *error){
     int i;
     
@@ -497,6 +558,10 @@ void newError(const char *error){
         numOfErrors = 1;
     }
     else{
+        for(i = 0; i < numOfErrors; i++){
+            if(strcmp(error, semErrors[i]) == 0)
+                return;
+        }
         temp = (char **) malloc (((numOfErrors) + 1) * (sizeof(char*)));
         for(i = 0; i < numOfErrors; i++)
             temp[i] = semErrors[i];
@@ -506,6 +571,7 @@ void newError(const char *error){
         numOfErrors++;
     }
 }
+
 //This function prints out all errors collected in semantic check
 void errorSummary(){
     int i;
@@ -529,6 +595,9 @@ void checkSemantics(Node *node, int level){
         checkProcFuncScope(node);
     if(strcmp(node->token, "VAR") == 0)
         checkVarScope(node);
+    if(strcmp(node->token, "CALL") == 0)
+        checkFunctionCall(node);
+
 }
 
 //This function checks that there is only one main function and it is defined as the last one
@@ -549,16 +618,6 @@ void checkMain(Node *node){
     }
 }
 
-//This function returns a childs position in fathers children array
-int getChildIndex(Node *father, Node *child){
-    int i = 0;
-    for(i=0; i<father->numOfChilds; i++){
-        if(father->child[i] == child)
-            return i;
-    }
-    return -1;
-}
-
 //This function checks that there are no 2 func/proc with the same name
 void checkProcFuncScope(Node *procNode){
     int i;
@@ -575,74 +634,89 @@ void checkProcFuncScope(Node *procNode){
     }
 }
 
-//This function parses a var node token to get variable names
-char ** getVarNames(char *var, int *var_size){
-    const char delim[2] = " ";
-    char *buffer = (char*) malloc (strlen(var) * sizeof(char));
-    char **varNames = NULL;
-    int i = 0;
-    *var_size = 0;
-    strcpy(buffer, var);
-   /* get the first token */
-   buffer = strtok(buffer, delim);
-   
-   /* walk through other tokens */
-   while( buffer != NULL ) {
-      buffer = strtok(NULL, delim);
-      if(buffer != NULL)
-        (*var_size)++;
-   }
-   buffer = (char*) malloc (strlen(var) * sizeof(char));
-   strcpy(buffer, var);
-   varNames = (char**) malloc ((*var_size) * sizeof(char*));
-   
-   /* get the first token */
-   buffer = strtok(buffer, delim);
-   
-   /* walk through other tokens */
-   while( buffer != NULL ) {
-      buffer = strtok(NULL, delim);
-      if(buffer != NULL){
-          varNames[i] = buffer;
-          i++;
-      }
-   }
-   return varNames;
-}
-
-//This function returns the number of similarities between two variable lists
-int compareVariables(char **list1, int size1, char **list2, int size2){
-    int i, j, sim = 0;
-    for(i = 0; i < size1; i++){
-        for(j = 0; j < size2; j++){
-            if(strcmp(list1[i], list2[j]) == 0)
-                sim++;
-        }
-    }
-    return sim;
-}
-
 //This function checks that there are no 2 variables with the same name in same scope
 void checkVarScope(Node *varNode){
-    Node *scopePtr = varNode->parent, *varPtr = varNode->child[0];
-    int selfVarSize, size, i, index;
-    char **selfVarNames = NULL, **varNames = NULL;
-    while(strcmp(varPtr->token, "") == 0)
-        varPtr = varPtr->child[0];
-    selfVarNames = getVarNames(varPtr->token, &selfVarSize);
-    if(compareVariables(selfVarNames, selfVarSize, selfVarNames, selfVarSize) != selfVarSize)
-        newError("Repeated variable name for same type");
-    index = getChildIndex(scopePtr, varNode);
-    while(strcmp(scopePtr->token, "BLOCK") != 0 && strcmp(scopePtr->token, "BODY") != 0)
-        scopePtr = scopePtr->parent;
-    for(i = 0; i < scopePtr->numOfChilds; i++){
-        if(strcmp(scopePtr->child[i]->token, "VAR") == 0){
-            Node *search = scopePtr->child[i];
-            while(strcmp(search->token, "") == 0)
-                search = search->child[0];
-            varNames = getVarNames(search->token, &size);
-            if(compareVariables(selfVarNames, selfVarSize, varNames, size) != 0)
-                newError("Conflicting variable names");
+    Node *scopePtr = findScopeNode(varNode);
+    SymTable *table = findTable(scopePtr);
+    if(checkTableRepeat(table) == 0)
+        newError("Conflicting variable names");
+}
+
+void checkFunctionCall(Node *callNode){
+  Node * search = callNode->parent, *funcNode = NULL, *prev = callNode;
+  int i, found = 0, numArgs;
+  char **argNames = NULL;
+  
+  //Attempting to find func/proc 
+  while(!found && search != NULL){
+        for(i = 0; i < search->numOfChilds; i++){
+            if(strcmp(search->child[i]->token, "PROC") == 0 || strcmp(search->child[i]->token, "FUNC") == 0){   //When finding func or proc definition
+                if(strcmp(search->child[i]->child[0]->token, callNode->child[0]->token) == 0){    //If the func/proc matches the call
+                    if(getChildIndex(search, prev) > i){
+                        funcNode = search->child[i];
+                        found = 1;
+                    }
+                }    
+            }
+        }
+        prev = search;
+        search = search->parent;
+    }
+    if(funcNode == NULL){
+        newError("Must define a function/proc before calling it");
+        return;
+    }
+    numArgs = countWords(callNode->child[0]->token);
+    argNames = parseString(callNode->child[0]->token, numArgs);
+    printf("num args = %d\n", numArgs);
+
+
+}
+
+//This function returns a node's scope node
+Node * findScopeNode(Node *node){
+    Node *search = node->parent;
+    while(search != NULL){
+        if(strcmp(search->token, "PROC") == 0 || strcmp(search->token, "FUNC") == 0 || strcmp(search->token, "BLOCK") == 0)
+            return search;
+        search = search->parent;
+    }
+    return search;
+}
+
+//This function initializes scopes and their symbol tables
+void initScopes(Node *node){
+    int i, j, count;
+    char **variables = NULL;
+    Node *scopePtr = NULL;
+    Symbol *newSym = NULL;
+    SymTable *table = NULL, *newScope = NULL;
+    variableType varType;
+    
+    if(strcmp(node->token, "PROC") == 0 || strcmp(node->token, "FUNC") == 0 || strcmp(node->token, "BLOCK") == 0 || strcmp(node->token, "BODY") == 0){
+        newScope = newSymTable(node);
+        addTable(newScope);
+    }
+
+    if(strcmp(node->token, "ARGS") == 0 || strcmp(node->token, "VAR") == 0){
+        if(strcmp(node->token, "ARGS") == 0)
+            varType = ARGUMENT;
+        else
+            varType = LOCAL;
+
+        scopePtr = findScopeNode(node);
+
+        for(i = 0; i < node->numOfChilds; i++){
+            count = countWords(node->child[i]->token);
+            
+            variables = parseString(node->child[i]->token, count);
+            for(j = 1; j < count; j++){
+                newSym = newSymbol(variables[j], variables[0], NULL, varType);
+                table = findTable(scopePtr);
+                addSymbol(table, newSym);
+            }
         }
     }
+    for(i = 0; i < node->numOfChilds; i++)
+        initScopes(node->child[i]);
 }
