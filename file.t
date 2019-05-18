@@ -1,3 +1,3 @@
-proc f1(){
-  x[5+6] = 1;
+func f1() return char{
+  return x;
 }

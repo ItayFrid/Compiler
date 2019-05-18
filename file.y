@@ -198,14 +198,14 @@ funcbody:
             // char *s = (char*)malloc(sizeof(char));
             // strcat(s,"RET ");
             // strcat(s,$4);
-            $$ = createNode("BODY",$2,$4,NULL);
+            $$ = createNode("BODY",$2,createNode("RET",$4,NULL),NULL);
         }
     | LCB RETURN exp SEMICOLON RCB
         {
             // char *s = (char*)malloc(sizeof(char));
             // strcat(s,"RET ");
             // strcat(s,$3);
-            $$ = createNode("BODY",$3,NULL);   
+            $$ = createNode("BODY",createNode("RET",$3,NULL),NULL);   
         }
     ;
 
