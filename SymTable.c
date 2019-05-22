@@ -1,77 +1,44 @@
+#include "definitions.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 #include <malloc.h>
-
-typedef struct Node Node;
-typedef struct Node{
-    char *token;
-    Node **child;
-    Node* parent;
-    int numOfChilds;
-} Node;
-
-typedef enum 
-{ 
-    ARGUMENT, 
-    LOCAL,  
-} variableType;
-
-typedef struct Symbol Symbol;
-typedef struct Symbol{
-    char *id;
-    char *type;
-    char *value;
-    variableType varType;
-    Symbol *next;
-
-} Symbol;
-
-typedef struct SymTable SymTable;
-typedef struct SymTable{
-    Node * scopePtr;
-    Symbol *symbolListHead;
-    SymTable *next;
-} SymTable;
+#ifndef TABLE
+#define TABLE
 
 
-
-SymTable *scopes_head = NULL;
-
-
-Symbol * newSymbol(char *id, char *type, char *value, variableType varType);
-void addSymbol(SymTable *table, Symbol *symbol);
-Symbol * findSymbol(SymTable *table, char *id);
-SymTable * newSymTable(Node *scopePtr);
-void addTable(SymTable *newTable);
-SymTable * findTable(Node *scopePtr);
-
-
-Symbol * newSymbol(char *id, char *type, char *value, variableType varType){
+//Creating new symbol
+Symbol * newSymbol(char *id, char *type, char *value, identifierType idType){
     Symbol *newSymbol = (Symbol*) malloc (sizeof(Symbol));
     newSymbol->id = id;
     newSymbol->type = type;
     newSymbol->value = value;
-    newSymbol->varType = varType;
+    newSymbol->idType = idType;
     newSymbol->next = NULL;
     return newSymbol;
 }
-
-void addSymbol(SymTable *table, Symbol *symbol){
+//Adding symbol to symbol table : returns 1 is added, 0 if symbol already exists
+int addSymbol(SymTable *table, Symbol *newSym){
+    Symbol *lastSym = NULL;
+    if(findSymbol(table, newSym->id, newSym->idType) != NULL)
+        return 0;
     if(table->symbolListHead == NULL)
-        table->symbolListHead = symbol;
+        table->symbolListHead = newSym;
     else{
-        symbol->next = table->symbolListHead;
-        table->symbolListHead = symbol;
+        lastSym = table->symbolListHead;
+        while(lastSym->next != NULL)
+            lastSym = lastSym->next;
+        lastSym->next = newSym;
     }
+    return 1;
 
 }
-
-Symbol * findSymbol(SymTable *table, char *id){
+//Finding a symbol in a table : returns NULL if not found
+Symbol * findSymbol(SymTable *table, char *id, identifierType idType){
     Symbol *search = table->symbolListHead;
     while(search != NULL){
-        if(strcmp(search->id, id) == 0)
+        if(strcmp(search->id, id) == 0 && search->idType == idType)
             return search;
         search = search->next;
     }
@@ -79,7 +46,7 @@ Symbol * findSymbol(SymTable *table, char *id){
 }
 
 
-
+//Creating new table
 SymTable * newSymTable(Node *scopePtr){
     SymTable *newTable = (SymTable*) malloc (sizeof(SymTable));
     newTable->scopePtr = scopePtr;
@@ -87,7 +54,7 @@ SymTable * newSymTable(Node *scopePtr){
     newTable->next = NULL;
     return newTable;
 }
-
+//Adding a scope's table to global list
 void addTable(SymTable *newTable){
     if(scopes_head == NULL)
         scopes_head = newTable;
@@ -96,7 +63,7 @@ void addTable(SymTable *newTable){
         scopes_head = newTable;
     }
 }
-
+//Finding a scope's table
 SymTable * findTable(Node *scopePtr){
     SymTable *search = scopes_head;
     while(search != NULL){
@@ -106,21 +73,21 @@ SymTable * findTable(Node *scopePtr){
     }
     return search;
 }
-
+//Printing out symbol information
 void printSymbol(Symbol *symbol){
     if(symbol->value!=NULL)
         printf("Id: %s\tType: %s\tValue: %s\tSymbol type: ", symbol->id,symbol->type, symbol->value);
     else
         printf("Id: %s\tType: %s\tValue: NULL\tSymbol type: ", symbol->id,symbol->type);
 
-    if(symbol->varType == ARGUMENT)
-        printf("ARGUMENT\n");
+    if(symbol->idType == VARIABLE)
+        printf("VARIABLE\n");
     else
-        printf("LOCAL\n");
+        printf("FUNCTION\n");
     
     
 }
-
+//Printing out table information
 void printTable(SymTable *table){
     Symbol *scan = table->symbolListHead;
     printf("Scope: %s\n", table->scopePtr->token);
@@ -129,7 +96,7 @@ void printTable(SymTable *table){
         scan = scan->next;
     }
 }
-
+//Printing out all the scopes
 void printScopes(){
     SymTable *scan = scopes_head;
     while(scan != NULL){
@@ -138,24 +105,15 @@ void printScopes(){
     }
 }
 
-
-int checkTableRepeat(SymTable *table){
-    Symbol *ptr1 = table->symbolListHead, *ptr2 = table->symbolListHead;
-    if(ptr2 == NULL)
-        return 1;
-    
-    while(ptr1 != NULL){
-        while(ptr2 != NULL){
-            if(ptr1!=ptr2 && strcmp(ptr1->id, ptr2->id) >= 0 && ptr1->varType == ptr2->varType)
-                return 0;
-            ptr2 = ptr2->next;
-        }
-        ptr2 = table->symbolListHead;
-        ptr1 = ptr1->next;
+int getTableSize(SymTable *table){
+    int count = 0;
+    Symbol *scan = table->symbolListHead;
+    while(scan != NULL){
+        count++;
+        scan = scan->next;
     }
-    return 1;
+    return count;
 }
-
 
 int countWords(char *string){
     int count = 0, i;
@@ -163,8 +121,6 @@ int countWords(char *string){
         if(string[i] == ' ')
             count++;
     }
-    if(count == 0 && strlen(string) >= 1)
-        count++;
     return count;
 }
 char ** parseString(char *var, int size){
@@ -184,3 +140,6 @@ char ** parseString(char *var, int size){
    }
    return varNames;
 }  
+
+
+#endif

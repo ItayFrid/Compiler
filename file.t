@@ -1,3 +1,4 @@
-func f1() return char{
-  return x;
+
+proc Main(){
+  var x:string[20];
 }
