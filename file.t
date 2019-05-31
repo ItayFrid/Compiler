@@ -1,5 +1,6 @@
 
 proc Main(){
   var x:int*;
-  ^x=6;
+  var y:int;
+  ^x=y;
 }

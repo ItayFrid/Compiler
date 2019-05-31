@@ -206,8 +206,8 @@ declare:
 
 assign:
     identifier ASSIGNMENT exp {$$ = createNode("=", $1, $3, NULL);}
-    | REF identifier ASSIGNMENT exp {$$ = createNode("=",createNode("&" ,$2, $4, NULL),NULL);}
-    | DEREF identifier ASSIGNMENT exp {$$ = createNode("=",createNode("^",$2, $4, NULL),NULL);}
+    | REF identifier ASSIGNMENT exp {$$ = createNode("=",createNode("&" ,$2, NULL),$4,NULL);}
+    | DEREF identifier ASSIGNMENT exp {$$ = createNode("=",createNode("^",$2, NULL),$4,NULL);}
     ;
 
 exp:
