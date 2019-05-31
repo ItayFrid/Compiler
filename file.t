@@ -1,4 +1,5 @@
 
 proc Main(){
-  var x:string[20];
+  var x,y:char;
+  y = ^x;
 }
