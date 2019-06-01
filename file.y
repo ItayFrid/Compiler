@@ -2,9 +2,6 @@
 // Idan Aharon  305437774
 // Noam Bahar   203155650
 
-// TODO:
-// add E in left double
-// Check if array[exp] need to be expression or identifier
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,9 +11,10 @@
 #include "definitions.h"
 #include "lex.yy.c"
 
-#include "Semantics.c"
-#include "tree.c"
+#include "Tree.c"
 #include "SymTable.c"
+#include "Semantics.c"
+#include "3AC.c"
 
 %}
 %union {
@@ -31,11 +29,13 @@
 %token LENGTH PLUS MINUS MULT OR REF DEREF NOT DIFF TRUE FALSE IDENTIFIER
 %token CHARACTER STR MAIN
 
+%left AND
+%left OR
+
 %left GREATER GREATEREQUAL LESS LESSEQUAL EQUAL DIFF
 %left PLUS MINUS
 %left MULT DIVIDE
-%left OR
-%left AND
+
 %left LB RB
 %left NOT REF DEREF
 %left ELSE
@@ -44,17 +44,24 @@
 %type<nPtr> code proc func arguments body funcbody assign exp statements statement if loop declare retType identifier argumentList parameters main retStatement funcCall funcArgs args retval
 %type<value> type bool NUM IDENTIFIER STRING
 %%
-
 program:
     process
     {
         reverseChilds(pTree);
         makeParents(pTree, 1);
+
         initScopes(pTree);
+        printf("Checking semantics...\n");
         checkSemantics(pTree, 1);
-        errorSummary();
-        if(numOfErrors == 0)
+        
+        if(numOfErrors == 0){
             print(pTree);
+            printf("Generating intermidate code...\n");
+            start3AC(pTree);
+            printf("Code compiled successfully\n");
+        }
+        else
+            errorSummary();
     }
     ;
 
@@ -240,6 +247,7 @@ identifier:
 
 int main(){
     pTree = createNode("CODE", NULL);
+    printf("Parsing code...\n");
     yyparse();
     return 0;
 }

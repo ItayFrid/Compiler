@@ -7,7 +7,6 @@
 #ifndef TABLE
 #define TABLE
 
-
 //Creating new symbol
 Symbol * newSymbol(char *id, char *type, char *value, identifierType idType){
     Symbol *newSymbol = (Symbol*) malloc (sizeof(Symbol));
@@ -18,6 +17,7 @@ Symbol * newSymbol(char *id, char *type, char *value, identifierType idType){
     newSymbol->next = NULL;
     return newSymbol;
 }
+
 //Adding symbol to symbol table : returns 1 is added, 0 if symbol already exists
 int addSymbol(SymTable *table, Symbol *newSym){
     Symbol *lastSym = NULL;
@@ -34,6 +34,7 @@ int addSymbol(SymTable *table, Symbol *newSym){
     return 1;
 
 }
+
 //Finding a symbol in a table : returns NULL if not found
 Symbol * findSymbol(SymTable *table, char *id, identifierType idType){
     Symbol *search = table->symbolListHead;
@@ -45,7 +46,6 @@ Symbol * findSymbol(SymTable *table, char *id, identifierType idType){
     return search;
 }
 
-
 //Creating new table
 SymTable * newSymTable(Node *scopePtr){
     SymTable *newTable = (SymTable*) malloc (sizeof(SymTable));
@@ -54,6 +54,7 @@ SymTable * newSymTable(Node *scopePtr){
     newTable->next = NULL;
     return newTable;
 }
+
 //Adding a scope's table to global list
 void addTable(SymTable *newTable){
     if(scopes_head == NULL)
@@ -63,6 +64,7 @@ void addTable(SymTable *newTable){
         scopes_head = newTable;
     }
 }
+
 //Finding a scope's table
 SymTable * findTable(Node *scopePtr){
     SymTable *search = scopes_head;
@@ -73,6 +75,7 @@ SymTable * findTable(Node *scopePtr){
     }
     return search;
 }
+
 //Printing out symbol information
 void printSymbol(Symbol *symbol){
     if(symbol->value!=NULL)
@@ -87,6 +90,7 @@ void printSymbol(Symbol *symbol){
     
     
 }
+
 //Printing out table information
 void printTable(SymTable *table){
     Symbol *scan = table->symbolListHead;
@@ -96,6 +100,7 @@ void printTable(SymTable *table){
         scan = scan->next;
     }
 }
+
 //Printing out all the scopes
 void printScopes(){
     SymTable *scan = scopes_head;
@@ -105,6 +110,7 @@ void printScopes(){
     }
 }
 
+//This function counts symbols in a symbol table
 int getTableSize(SymTable *table){
     int count = 0;
     Symbol *scan = table->symbolListHead;
@@ -114,32 +120,5 @@ int getTableSize(SymTable *table){
     }
     return count;
 }
-
-int countWords(char *string){
-    int count = 0, i;
-    for(i = 0; i < strlen(string); i++){
-        if(string[i] == ' ')
-            count++;
-    }
-    return count;
-}
-char ** parseString(char *var, int size){
-    const char delim[2] = " ";
-    char *buffer = (char*) malloc (strlen(var) * sizeof(char));
-    char **varNames = NULL;
-    int i = 0;
-    strcpy(buffer, var);
-
-    varNames = (char**) malloc (size * sizeof(char*));
-    buffer = strtok(buffer, delim);
-   /* walk through other tokens */
-   while( buffer != NULL ) {
-       varNames[i] = buffer;
-       i++;
-        buffer = strtok(NULL, delim);
-   }
-   return varNames;
-}  
-
 
 #endif
